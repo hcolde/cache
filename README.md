@@ -19,7 +19,7 @@ import (
   "fmt"
   "time"
 
-	"github.com/hcolde/cache"
+  "github.com/hcolde/cache"
 )
 
 func main() {
