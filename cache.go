@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-type cache struct {
+type Cache struct {
 	mu   sync.Mutex
 
 	refreshTTL bool
@@ -28,13 +28,13 @@ type cache struct {
 	items map[string]*item
 }
 
-// New create a cache.cache
-func New(ctx context.Context, options Options) (*cache, error) {
+// New create a cache.Cache
+func New(ctx context.Context, options Options) (*Cache, error) {
 	if options.MaxSize == 0 {
 		return nil, ErrMaxSizeIsZero
 	}
 
-	cache := &cache{
+	cache := &Cache{
 		w: int(math.Floor(math.Log2(float64(options.MaxSize)))) + 1,
 		size:  options.MaxSize,
 		ring:  make([]string, options.MaxSize),
@@ -49,7 +49,7 @@ func New(ctx context.Context, options Options) (*cache, error) {
 }
 
 // Put the item's index into indexPool, when the ttl has expired.
-func (c *cache) get(key string, forced bool) interface{} {
+func (c *Cache) get(key string, forced bool) interface{} {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -79,7 +79,7 @@ func (c *cache) get(key string, forced bool) interface{} {
 // Get gets the value associated with the given key.
 // Once the key is not set or timespan has elapsed,
 // it returns nil.
-func (c *cache) Get(key string) interface{} {
+func (c *Cache) Get(key string) interface{} {
 	return c.get(key, false)
 }
 
@@ -87,13 +87,13 @@ func (c *cache) Get(key string) interface{} {
 // even if the ttl has expired, when the key is not removed
 // by the regular purge rules. But once the key is not set,
 // it returns nil.
-func (c *cache) ForcedGet(key string) interface{} {
+func (c *Cache) ForcedGet(key string) interface{} {
 	return c.get(key, true)
 }
 
 // Set returns the value with the given key if present.
 // Otherwise, it stores the given value and returns nil.
-func (c *cache) Set(key string, val interface{}, ttl time.Duration) {
+func (c *Cache) Set(key string, val interface{}, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -130,11 +130,11 @@ func (c *cache) Set(key string, val interface{}, ttl time.Duration) {
 	c.items[key]  = newItem(val, index, ttl)
 }
 
-// getIndex returns an index used for cache.ring.
+// getIndex returns an index used for Cache.ring.
 // Returns the index in indexPool first,
-// and returns the index on cache.head when indexPool is empty,
-// otherwise returns the index on cache.tail and remove the this item.
-func (c *cache) getIndex() uint64 {
+// and returns the index on Cache.head when indexPool is empty,
+// otherwise returns the index on Cache.tail and remove the this item.
+func (c *Cache) getIndex() uint64 {
 	select {
 	case index, ok := <-c.indexPool:
 		if ok {
@@ -158,7 +158,7 @@ func (c *cache) getIndex() uint64 {
 }
 
 // remove the item from the given index.
-func (c *cache) removeOnIndex(index uint64) {
+func (c *Cache) removeOnIndex(index uint64) {
 	key := c.ring[index]
 	if key == "" {
 		return
@@ -174,7 +174,7 @@ func (c *cache) removeOnIndex(index uint64) {
 }
 
 // Remove regularly
-func (c *cache) timedRemove(ctx context.Context) {
+func (c *Cache) timedRemove(ctx context.Context) {
 	for {
 		timer := time.NewTimer(100 * time.Millisecond)
 		select {
@@ -187,9 +187,9 @@ func (c *cache) timedRemove(ctx context.Context) {
 	}
 }
 
-// check the ttl of log2(cache.size) item at a time.
-// It will continue to check when the remove item exceeds cache.size * 0.25.
-func (c *cache) remove() {
+// check the ttl of log2(Cache.size) item at a time.
+// It will continue to check when the remove item exceeds Cache.size * 0.25.
+func (c *Cache) remove() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-func newCache(size uint64) (*cache, error) {
+func newCache(size uint64) (*Cache, error) {
 	opt := Options{
 		MaxSize: size,
 		RefreshTTL: true,
